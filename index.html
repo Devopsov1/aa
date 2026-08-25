@@ -1,0 +1,824 @@
+/**
+ * API COFFEE - Web App & Retro Mini-Game Engine
+ * Cryptographic Protection: AES-256-GCM Key Derivation
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Telegram WebApp Initialization ---
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready();
+        tg.expand();
+        document.body.classList.add('twa-active');
+        if (tg.colorScheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.getElementById('themeIcon').textContent = '☀️';
+        }
+    }
+
+    // --- DOM Elements ---
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const soundToggle = document.getElementById('soundToggle');
+    const soundIcon = document.getElementById('soundIcon');
+
+    // Call Elements
+    const startCallBtn = document.getElementById('startCallBtn');
+    const callOverlay = document.getElementById('callOverlay');
+    const callStatusText = document.getElementById('callStatusText');
+    const callTimer = document.getElementById('callTimer');
+    const subtitlesText = document.getElementById('subtitlesText');
+    const muteBtn = document.getElementById('muteBtn');
+    const speakerBtn = document.getElementById('speakerBtn');
+    const endCallBtn = document.getElementById('endCallBtn');
+    const visualizerCanvas = document.getElementById('audioVisualizer');
+    const canvasCtx = visualizerCanvas.getContext('2d');
+    const audioVoiceDmitry = document.getElementById('audioVoiceDmitry');
+
+    // Code Form Elements
+    const codeForm = document.getElementById('codeForm');
+    const codeInput = document.getElementById('codeInput');
+    const clearInputBtn = document.getElementById('clearInputBtn');
+    const submitCodeBtn = document.getElementById('submitCodeBtn');
+    const feedbackBox = document.getElementById('feedbackBox');
+    const feedbackIcon = document.getElementById('feedbackIcon');
+    const feedbackText = document.getElementById('feedbackText');
+    const flagCard = document.getElementById('flagCard');
+    const flagValue = document.getElementById('flagValue');
+    const copyFlagBtn = document.getElementById('copyFlagBtn');
+    const tgSendContainer = document.getElementById('tgSendContainer');
+    const tgSendBtn = document.getElementById('tgSendBtn');
+
+    // Game Elements
+    const gameCanvas = document.getElementById('gameCanvas');
+    const gctx = gameCanvas.getContext('2d');
+    const gameScoreEl = document.getElementById('gameScore');
+    const gameBestScoreEl = document.getElementById('gameBestScore');
+    const gameLivesEl = document.getElementById('gameLives');
+    const gameStartOverlay = document.getElementById('gameStartOverlay');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const restartGameBtn = document.getElementById('restartGameBtn');
+    const finalScoreText = document.getElementById('finalScoreText');
+    const centerCupIndicator = document.getElementById('centerCupIndicator');
+
+    const btnTL = document.getElementById('btnTL');
+    const btnBL = document.getElementById('btnBL');
+    const btnTR = document.getElementById('btnTR');
+    const btnBR = document.getElementById('btnBR');
+
+    // --- Audio Context & Sound Synthesizer ---
+    let audioCtx = null;
+    let analyser = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 64;
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    soundToggle.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        soundIcon.textContent = soundEnabled ? '🔊' : '🔇';
+        triggerHaptic('selection');
+    });
+
+    function playTone(freq, duration, type = 'sine', gainVal = 0.2) {
+        if (!soundEnabled || !audioCtx) return;
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(gainVal, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    function playCatchSound() {
+        if (!soundEnabled) return;
+        initAudio();
+        playTone(587.33, 0.08, 'square', 0.15);
+        setTimeout(() => playTone(880.00, 0.12, 'square', 0.2), 60);
+    }
+
+    function playSpillSound() {
+        if (!soundEnabled) return;
+        initAudio();
+        playTone(180, 0.15, 'sawtooth', 0.25);
+        setTimeout(() => playTone(120, 0.25, 'sawtooth', 0.2), 80);
+    }
+
+    function playGameOverSound() {
+        if (!soundEnabled) return;
+        initAudio();
+        playTone(330, 0.15, 'triangle', 0.25);
+        setTimeout(() => playTone(293, 0.15, 'triangle', 0.25), 150);
+        setTimeout(() => playTone(261, 0.35, 'triangle', 0.25), 300);
+    }
+
+    function playMoveSound() {
+        if (!soundEnabled) return;
+        initAudio();
+        playTone(440, 0.04, 'sine', 0.08);
+    }
+
+    function playRingTone(duration = 0.9) {
+        if (!audioCtx) return;
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(425, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.04);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime + duration - 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    function triggerHaptic(type) {
+        try {
+            if (tg?.HapticFeedback) {
+                if (type === 'success' || type === 'error' || type === 'warning') {
+                    tg.HapticFeedback.notificationOccurred(type);
+                } else if (type === 'impact') {
+                    tg.HapticFeedback.impactOccurred('medium');
+                } else if (type === 'selection') {
+                    tg.HapticFeedback.selectionChanged();
+                }
+            } else if (navigator.vibrate) {
+                if (type === 'success') navigator.vibrate([40, 60, 80]);
+                else if (type === 'error') navigator.vibrate([100, 50, 100]);
+                else navigator.vibrate(25);
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const newTheme = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        themeIcon.textContent = newTheme === 'light' ? '☀️' : '🌙';
+        triggerHaptic('selection');
+    });
+
+    if (tg && tg.initData) {
+        tgSendContainer.style.display = 'block';
+    }
+
+    // ========================================================
+    // CALL TO API COFFEE FLOW
+    // ========================================================
+    let isCallActive = false;
+    let callTimerInterval = null;
+    let callSeconds = 0;
+    let visualizerAnimationId = null;
+    let isMuted = false;
+    let isSpeakerOn = true;
+
+    startCallBtn.addEventListener('click', () => {
+        triggerHaptic('impact');
+        startPhoneCall();
+    });
+
+    function startPhoneCall() {
+        initAudio();
+        isCallActive = true;
+        callSeconds = 0;
+
+        callOverlay.className = 'call-overlay active ringing';
+        callStatusText.textContent = 'Набор номера...';
+        callTimer.style.display = 'none';
+        callTimer.textContent = '00:00';
+        subtitlesText.textContent = 'Соединение с API COFFEE...';
+
+        startVisualizer();
+        playRingTone(0.8);
+
+        setTimeout(() => {
+            if (!isCallActive) return;
+            callStatusText.textContent = 'Идут гудки...';
+            playRingTone(0.9);
+        }, 1300);
+
+        setTimeout(() => {
+            if (!isCallActive) return;
+            connectCallAndSpeak();
+        }, 2800);
+    }
+
+    function connectCallAndSpeak() {
+        if (!isCallActive) return;
+
+        callOverlay.className = 'call-overlay active speaking';
+        callStatusText.textContent = 'Бариста на связи';
+        callTimer.style.display = 'block';
+
+        clearInterval(callTimerInterval);
+        callTimerInterval = setInterval(() => {
+            callSeconds++;
+            const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+            const secs = String(callSeconds % 60).padStart(2, '0');
+            callTimer.textContent = `${mins}:${secs}`;
+        }, 1000);
+
+        const voiceAudio = audioVoiceDmitry;
+
+        try {
+            if (!voiceAudio._connected && audioCtx) {
+                const source = audioCtx.createMediaElementSource(voiceAudio);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                voiceAudio._connected = true;
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+
+        subtitlesText.innerHTML = `
+            <span style="color: #4cd964; font-weight:700;">Бариста:</span> 
+            «Добрый день, это кофейня! Введите в чат кодовое слово дня»
+        `;
+
+        voiceAudio.currentTime = 0;
+        voiceAudio.play().then(() => {
+            triggerHaptic('selection');
+        }).catch(() => {
+            if ('speechSynthesis' in window) {
+                const utter = new SpeechSynthesisUtterance('Добрый день, это кофейня! Введите в чат кодовое слово дня');
+                utter.lang = 'ru-RU';
+                window.speechSynthesis.speak(utter);
+            }
+        });
+
+        voiceAudio.onended = () => {
+            if (!isCallActive) return;
+            subtitlesText.innerHTML = `
+                <span style="color: #34c759;">✓ Сообщение прослушано.</span> Введите кодовое слово в поле ниже!
+            `;
+            setTimeout(() => {
+                endPhoneCall(true);
+            }, 1800);
+        };
+    }
+
+    endCallBtn.addEventListener('click', () => {
+        triggerHaptic('error');
+        endPhoneCall(false);
+    });
+
+    function endPhoneCall(completedNormally = false) {
+        if (!isCallActive) return;
+        isCallActive = false;
+
+        clearInterval(callTimerInterval);
+        stopVisualizer();
+
+        if (audioVoiceDmitry) {
+            audioVoiceDmitry.pause();
+            audioVoiceDmitry.currentTime = 0;
+        }
+
+        callStatusText.textContent = 'Звонок завершен';
+        callOverlay.classList.remove('ringing', 'speaking');
+
+        setTimeout(() => {
+            callOverlay.classList.remove('active');
+            codeInput.focus();
+            if (completedNormally) {
+                showFeedback('info', '💬 Введите названное кодовое слово!');
+            }
+        }, 350);
+    }
+
+    muteBtn.addEventListener('click', () => {
+        isMuted = !isMuted;
+        muteBtn.classList.toggle('active-control', isMuted);
+        muteBtn.querySelector('.action-icon').textContent = isMuted ? '🔇' : '🎙️';
+        triggerHaptic('impact');
+    });
+
+    speakerBtn.addEventListener('click', () => {
+        isSpeakerOn = !isSpeakerOn;
+        speakerBtn.classList.toggle('active-control', !isSpeakerOn);
+        speakerBtn.querySelector('.action-icon').textContent = isSpeakerOn ? '🔊' : '🔈';
+        if (audioVoiceDmitry) {
+            audioVoiceDmitry.volume = isSpeakerOn ? 1.0 : 0.2;
+        }
+        triggerHaptic('impact');
+    });
+
+    function startVisualizer() {
+        const bufferLength = analyser ? analyser.frequencyBinCount : 32;
+        const dataArray = new Uint8Array(bufferLength);
+
+        function draw() {
+            if (!isCallActive) return;
+            visualizerAnimationId = requestAnimationFrame(draw);
+
+            if (analyser) {
+                analyser.getByteFrequencyData(dataArray);
+            }
+
+            canvasCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+
+            const width = visualizerCanvas.width;
+            const height = visualizerCanvas.height;
+            const barCount = 18;
+            const barWidth = 6;
+            const gap = 8;
+            const totalWidth = barCount * barWidth + (barCount - 1) * gap;
+            const startX = (width - totalWidth) / 2;
+
+            for (let i = 0; i < barCount; i++) {
+                let barHeight = 6;
+                if (analyser && dataArray[i] > 10) {
+                    barHeight = Math.max(6, (dataArray[i] / 255) * (height - 10));
+                } else if (callOverlay.classList.contains('speaking')) {
+                    barHeight = Math.max(6, Math.sin(Date.now() / 150 + i) * 18 + 20);
+                }
+
+                const x = startX + i * (barWidth + gap);
+                const y = (height - barHeight) / 2;
+
+                const gradient = canvasCtx.createLinearGradient(0, y, 0, y + barHeight);
+                gradient.addColorStop(0, '#34c759');
+                gradient.addColorStop(1, '#c98a58');
+
+                canvasCtx.fillStyle = gradient;
+                canvasCtx.beginPath();
+                canvasCtx.roundRect(x, y, barWidth, barHeight, 3);
+                canvasCtx.fill();
+            }
+        }
+        draw();
+    }
+
+    function stopVisualizer() {
+        if (visualizerAnimationId) {
+            cancelAnimationFrame(visualizerAnimationId);
+            visualizerAnimationId = null;
+        }
+        canvasCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+    }
+
+    // ========================================================
+    // CRYPTOGRAPHIC DECRYPTION ENGINE (AES-256-GCM)
+    // The flag is NOT stored in plain text anywhere in the code.
+    // The code word is NOT stored in plain text anywhere in the code.
+    // It can ONLY be decrypted with the mathematical key derived from the spoken phrase.
+    // ========================================================
+    const CIPHER_PAYLOAD_B64 = "8hJdHHYDNp9C2zoftp3B+4ZWSjbrn/o57Nr6dFxzHvvTnxdxHBUm85v/FiRpH99c3YuT";
+
+    async function attemptCryptoUnlock(userInput) {
+        try {
+            const rawBinary = atob(CIPHER_PAYLOAD_B64);
+            const bytes = new Uint8Array(rawBinary.length);
+            for (let i = 0; i < rawBinary.length; i++) bytes[i] = rawBinary.charCodeAt(i);
+
+            const iv = bytes.slice(0, 12);
+            const data = bytes.slice(12);
+
+            const normalizedInput = userInput.trim().toLowerCase().replace(/\s+/g, ' ');
+            const keyHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedInput));
+            const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt']);
+
+            const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, cryptoKey, data);
+            return new TextDecoder().decode(decryptedBuf);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    // ========================================================
+    // CODE WORD FORM SUBMISSION
+    // ========================================================
+    codeInput.addEventListener('input', () => {
+        clearInputBtn.style.display = codeInput.value ? 'flex' : 'none';
+    });
+
+    clearInputBtn.addEventListener('click', () => {
+        codeInput.value = '';
+        clearInputBtn.style.display = 'none';
+        codeInput.focus();
+    });
+
+    codeForm.addEventListener('submit', handleCodeSubmission);
+    submitCodeBtn.addEventListener('click', handleCodeSubmission);
+
+    let decryptedFlagValue = null;
+
+    async function handleCodeSubmission(e) {
+        if (e) e.preventDefault();
+
+        const rawCode = codeInput.value;
+        if (!rawCode || !rawCode.trim()) {
+            showFeedback('error', 'Пожалуйста, введите кодовое слово.');
+            triggerHaptic('warning');
+            return;
+        }
+
+        submitCodeBtn.disabled = true;
+        submitCodeBtn.querySelector('.btn-text').textContent = 'Проверка ключа...';
+
+        const decryptedFlag = await attemptCryptoUnlock(rawCode);
+
+        submitCodeBtn.disabled = false;
+        submitCodeBtn.querySelector('.btn-text').textContent = 'Проверить';
+
+        if (decryptedFlag && decryptedFlag.startsWith('API-')) {
+            decryptedFlagValue = decryptedFlag;
+            onCodeSuccess(decryptedFlag);
+        } else {
+            onCodeError();
+        }
+    }
+
+    function onCodeSuccess(flag) {
+        triggerHaptic('success');
+        showFeedback('success', 'Кодовое слово верное! Секретный флаг расшифрован.');
+
+        flagValue.textContent = flag;
+        flagCard.style.display = 'flex';
+        flagCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        launchConfetti();
+    }
+
+    function onCodeError() {
+        triggerHaptic('error');
+        showFeedback('error', 'Неверное кодовое слово. Позвоните в API COFFEE и послушайте бариста!');
+    }
+
+    function showFeedback(type, message) {
+        feedbackBox.style.display = 'flex';
+        feedbackBox.className = `feedback-box ${type}`;
+        
+        if (type === 'success') {
+            feedbackIcon.textContent = '✅';
+        } else if (type === 'error') {
+            feedbackIcon.textContent = '❌';
+            codeInput.parentElement.classList.add('shake');
+            setTimeout(() => codeInput.parentElement.classList.remove('shake'), 500);
+        } else {
+            feedbackIcon.textContent = '💡';
+        }
+        feedbackText.textContent = message;
+    }
+
+    copyFlagBtn.addEventListener('click', () => {
+        const flagText = flagValue.textContent.trim();
+        navigator.clipboard.writeText(flagText).then(() => {
+            triggerHaptic('success');
+            copyFlagBtn.classList.add('copied');
+            copyFlagBtn.querySelector('.copy-text').textContent = 'Скопировано! ✓';
+            copyFlagBtn.querySelector('.copy-icon').textContent = '✓';
+
+            setTimeout(() => {
+                copyFlagBtn.classList.remove('copied');
+                copyFlagBtn.querySelector('.copy-text').textContent = 'Скопировать';
+                copyFlagBtn.querySelector('.copy-icon').textContent = '📋';
+            }, 2500);
+        });
+    });
+
+    if (tgSendBtn) {
+        tgSendBtn.addEventListener('click', () => {
+            if (tg && tg.sendData && decryptedFlagValue) {
+                triggerHaptic('success');
+                tg.sendData(JSON.stringify({
+                    status: 'success',
+                    flag: decryptedFlagValue
+                }));
+            } else {
+                alert('Функция доступна при запуске внутри Telegram бота.');
+            }
+        });
+    }
+
+    function launchConfetti() {
+        if (typeof confetti === 'function') {
+            confetti({
+                particleCount: 80,
+                spread: 70,
+                origin: { y: 0.65 },
+                colors: ['#34c759', '#2481cc', '#c98a58', '#ffcc00']
+            });
+        }
+    }
+
+    // ========================================================
+    // RETRO COFFEE & MILK CATCHING GAME
+    // ========================================================
+    let gameState = 'START';
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem('api_coffee_best_score') || '0', 10);
+    let lives = 3;
+    let playerPos = 'TL';
+    let drops = [];
+    let gameLoopId = null;
+    let lastDropTime = 0;
+    let dropInterval = 1400;
+    let splashParticles = [];
+
+    gameBestScoreEl.textContent = String(bestScore).padStart(3, '0');
+
+    const RAMP_CONFIG = {
+        TL: { startX: 24, startY: 34, endX: 104, endY: 62, type: 'coffee', color: '#3b2210' },
+        BL: { startX: 24, startY: 132, endX: 104, endY: 160, type: 'coffee', color: '#4e2f16' },
+        TR: { startX: 316, startY: 34, endX: 236, endY: 62, type: 'milk', color: '#f4f6f8' },
+        BR: { startX: 316, startY: 132, endX: 236, endY: 160, type: 'milk', color: '#eef1f5' }
+    };
+
+    const CATCHER_COORDS = {
+        TL: { cupX: 108, cupY: 66, handX: 132, handY: 100, facing: 'left' },
+        BL: { cupX: 108, cupY: 164, handX: 132, handY: 140, facing: 'left' },
+        TR: { cupX: 232, cupY: 66, handX: 208, handY: 100, facing: 'right' },
+        BR: { cupX: 232, cupY: 164, handX: 208, handY: 140, facing: 'right' }
+    };
+
+    function setPlayerPosition(pos) {
+        if (playerPos === pos) return;
+        playerPos = pos;
+        playMoveSound();
+        triggerHaptic('impact');
+
+        [btnTL, btnBL, btnTR, btnBR].forEach(b => b.classList.remove('pressed'));
+        if (pos === 'TL') btnTL.classList.add('pressed');
+        if (pos === 'BL') btnBL.classList.add('pressed');
+        if (pos === 'TR') btnTR.classList.add('pressed');
+        if (pos === 'BR') btnBR.classList.add('pressed');
+
+        centerCupIndicator.textContent = (pos === 'TL' || pos === 'BL') ? '☕' : '🥛';
+    }
+
+    btnTL.addEventListener('click', () => setPlayerPosition('TL'));
+    btnBL.addEventListener('click', () => setPlayerPosition('BL'));
+    btnTR.addEventListener('click', () => setPlayerPosition('TR'));
+    btnBR.addEventListener('click', () => setPlayerPosition('BR'));
+
+    window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'q' || key === '7' || (e.key === 'ArrowUp' && playerPos.includes('L'))) setPlayerPosition('TL');
+        else if (key === 'a' || key === '1' || (e.key === 'ArrowDown' && playerPos.includes('L'))) setPlayerPosition('BL');
+        else if (key === 'o' || key === 'p' || key === '9' || (e.key === 'ArrowUp' && playerPos.includes('R'))) setPlayerPosition('TR');
+        else if (key === 'l' || key === '3' || (e.key === 'ArrowDown' && playerPos.includes('R'))) setPlayerPosition('BR');
+        else if (e.key === 'ArrowLeft') setPlayerPosition(playerPos.includes('T') ? 'TL' : 'BL');
+        else if (e.key === 'ArrowRight') setPlayerPosition(playerPos.includes('T') ? 'TR' : 'BR');
+    });
+
+    gameCanvas.parentElement.addEventListener('pointerdown', (e) => {
+        const rect = gameCanvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const midX = rect.width / 2;
+        const midY = rect.height / 2;
+
+        if (clickX < midX && clickY < midY) setPlayerPosition('TL');
+        else if (clickX < midX && clickY >= midY) setPlayerPosition('BL');
+        else if (clickX >= midX && clickY < midY) setPlayerPosition('TR');
+        else if (clickX >= midX && clickY >= midY) setPlayerPosition('BR');
+    });
+
+    startGameBtn.addEventListener('click', startMiniGame);
+    restartGameBtn.addEventListener('click', startMiniGame);
+
+    function startMiniGame() {
+        initAudio();
+        gameState = 'PLAYING';
+        score = 0;
+        lives = 3;
+        drops = [];
+        splashParticles = [];
+        dropInterval = 1400;
+        lastDropTime = performance.now();
+
+        updateScoreUI();
+        updateLivesUI();
+
+        gameStartOverlay.style.display = 'none';
+        gameOverOverlay.style.display = 'none';
+
+        triggerHaptic('success');
+        playTone(523.25, 0.1, 'triangle', 0.2);
+        setTimeout(() => playTone(659.25, 0.15, 'triangle', 0.2), 100);
+
+        cancelAnimationFrame(gameLoopId);
+        gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    function spawnDrop() {
+        const positions = ['TL', 'BL', 'TR', 'BR'];
+        const randomPos = positions[Math.floor(Math.random() * positions.length)];
+        const cfg = RAMP_CONFIG[randomPos];
+
+        drops.push({
+            pos: randomPos,
+            progress: 0,
+            speed: 0.006 + Math.min(0.009, score * 0.00018),
+            type: cfg.type,
+            color: cfg.color
+        });
+    }
+
+    function createSplash(x, y, color) {
+        for (let i = 0; i < 8; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * 2 + 1;
+            splashParticles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd - 1,
+                life: 1.0,
+                color: color
+            });
+        }
+    }
+
+    function gameLoop(currentTime) {
+        if (gameState !== 'PLAYING') return;
+
+        if (currentTime - lastDropTime > dropInterval) {
+            spawnDrop();
+            lastDropTime = currentTime;
+            dropInterval = Math.max(550, 1400 - score * 12);
+        }
+
+        gctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+        drawBaristaCharacter();
+
+        for (let i = drops.length - 1; i >= 0; i--) {
+            const drop = drops[i];
+            drop.progress += drop.speed;
+
+            const cfg = RAMP_CONFIG[drop.pos];
+            const curX = cfg.startX + (cfg.endX - cfg.startX) * drop.progress;
+            const curY = cfg.startY + (cfg.endY - cfg.startY) * drop.progress;
+
+            gctx.save();
+            gctx.fillStyle = drop.color;
+            gctx.beginPath();
+            gctx.arc(curX, curY, 6, 0, Math.PI * 2);
+            gctx.fill();
+
+            gctx.fillStyle = drop.type === 'milk' ? '#ffffff' : '#8b5a2b';
+            gctx.beginPath();
+            gctx.arc(curX - 2, curY - 2, 2.5, 0, Math.PI * 2);
+            gctx.fill();
+            gctx.restore();
+
+            if (drop.progress >= 1.0) {
+                if (playerPos === drop.pos) {
+                    score += 10;
+                    playCatchSound();
+                    triggerHaptic('selection');
+                    updateScoreUI();
+                    createSplash(cfg.endX, cfg.endY, drop.type === 'milk' ? '#ffffff' : '#3b2210');
+                } else {
+                    lives--;
+                    playSpillSound();
+                    triggerHaptic('error');
+                    updateLivesUI();
+                    createSplash(cfg.endX, cfg.endY + 14, drop.type === 'milk' ? '#ffffff' : '#3b2210');
+
+                    if (lives <= 0) {
+                        handleGameOver();
+                        return;
+                    }
+                }
+                drops.splice(i, 1);
+            }
+        }
+
+        for (let i = splashParticles.length - 1; i >= 0; i--) {
+            const p = splashParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.12;
+            p.life -= 0.04;
+
+            if (p.life <= 0) {
+                splashParticles.splice(i, 1);
+            } else {
+                gctx.fillStyle = p.color;
+                gctx.globalAlpha = p.life;
+                gctx.beginPath();
+                gctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                gctx.fill();
+                gctx.globalAlpha = 1.0;
+            }
+        }
+
+        gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    function drawBaristaCharacter() {
+        const coords = CATCHER_COORDS[playerPos];
+        gctx.save();
+        const centerX = 170;
+        const centerY = 130;
+
+        gctx.fillStyle = '#223325';
+        gctx.beginPath();
+        gctx.arc(centerX, centerY - 28, 14, 0, Math.PI * 2);
+        gctx.fill();
+
+        gctx.fillStyle = '#1c281e';
+        gctx.fillRect(centerX - 12, centerY - 14, 24, 38);
+
+        gctx.fillStyle = '#c98a58';
+        gctx.beginPath();
+        gctx.arc(centerX, centerY + 2, 4, 0, Math.PI * 2);
+        gctx.fill();
+
+        gctx.strokeStyle = '#223325';
+        gctx.lineWidth = 6;
+        gctx.lineCap = 'round';
+        gctx.beginPath();
+        gctx.moveTo(centerX, centerY - 2);
+        gctx.lineTo(coords.handX, coords.handY);
+        gctx.lineTo(coords.cupX, coords.cupY + 4);
+        gctx.stroke();
+
+        const cupX = coords.cupX;
+        const cupY = coords.cupY;
+
+        gctx.fillStyle = '#ffffff';
+        gctx.beginPath();
+        gctx.roundRect(cupX - 12, cupY - 8, 24, 18, [2, 2, 8, 8]);
+        gctx.fill();
+
+        gctx.strokeStyle = '#ffffff';
+        gctx.lineWidth = 3;
+        gctx.beginPath();
+        if (coords.facing === 'left') {
+            gctx.arc(cupX + 13, cupY, 5, -Math.PI / 2, Math.PI / 2);
+        } else {
+            gctx.arc(cupX - 13, cupY, 5, Math.PI / 2, -Math.PI / 2);
+        }
+        gctx.stroke();
+
+        gctx.fillStyle = playerPos.includes('L') ? '#4a2c14' : '#f0f3f6';
+        gctx.beginPath();
+        gctx.ellipse(cupX, cupY - 6, 9, 3, 0, 0, Math.PI * 2);
+        gctx.fill();
+
+        gctx.restore();
+    }
+
+    function updateScoreUI() {
+        gameScoreEl.textContent = String(score).padStart(3, '0');
+        if (score > bestScore) {
+            bestScore = score;
+            localStorage.setItem('api_coffee_best_score', bestScore);
+            gameBestScoreEl.textContent = String(bestScore).padStart(3, '0');
+        }
+    }
+
+    function updateLivesUI() {
+        const beans = gameLivesEl.querySelectorAll('.life-bean');
+        beans.forEach((b, idx) => {
+            if (idx < lives) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+    }
+
+    function handleGameOver() {
+        gameState = 'GAMEOVER';
+        cancelAnimationFrame(gameLoopId);
+        playGameOverSound();
+        triggerHaptic('error');
+
+        finalScoreText.textContent = score;
+        gameOverOverlay.style.display = 'flex';
+    }
+});

@@ -469,6 +469,30 @@ body {
     cursor: pointer;
 }
 
+.flag-hint-link {
+    display: block;
+    margin-top: 6px;
+    padding: 12px 14px;
+    background: rgba(201, 138, 88, 0.12);
+    border: 1px dashed var(--coffee-primary);
+    border-radius: var(--radius-md);
+    color: var(--coffee-primary);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.flag-hint-link:hover {
+    background: rgba(201, 138, 88, 0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px var(--coffee-glow);
+    color: #e0a06a;
+}
+
 /* ========================================================
    RETRO COFFEE & MILK CATCHING MINI GAME (GAME & WATCH STYLE)
    ======================================================== */
@@ -1148,6 +1172,10 @@ body {
                         <span>✈️ Отправить в Telegram</span>
                     </button>
                 </div>
+
+                <a class="flag-hint-link" id="flagHintLink" href="https://ag6po0p8tu.hdply.com" target="_blank" rel="noopener noreferrer">
+                    АААААА!!! Я забыл пропуск, придется открывать турникет радионяней...
+                </a>
             </section>
 
             <!-- MINI-GAME: Поймай кофе и молоко -->
@@ -1850,6 +1878,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const flagHintLink = document.getElementById('flagHintLink');
+    if (flagHintLink) {
+        flagHintLink.addEventListener('click', (e) => {
+            const hintUrl = 'https://ag6po0p8tu.hdply.com';
+            triggerHaptic('impact');
+            if (tg && typeof tg.openLink === 'function') {
+                e.preventDefault();
+                tg.openLink(hintUrl);
+            }
+        });
+    }
+
     function launchConfetti() {
         if (typeof confetti === 'function') {
             confetti({
@@ -2150,5 +2190,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a30ac8893bf3f147',t:'MTc4NzY2Mjg2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a30ac8893bf3f147',t:'MTc4NzY2Mjg2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a33b19b50af68ddb',t:'MTc4ODE2OTUwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

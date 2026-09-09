@@ -453,44 +453,42 @@ body {
     box-shadow: 0 6px 18px var(--accent-glow);
 }
 
-.tg-send-container {
-    margin-top: 4px;
-}
-
-.tg-send-btn {
-    width: 100%;
-    height: 44px;
-    background: rgba(36, 129, 204, 0.2);
-    border: 1px solid var(--accent-color);
-    color: #ffffff;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
 .flag-hint-link {
     display: block;
-    margin-top: 6px;
-    padding: 12px 14px;
-    background: rgba(201, 138, 88, 0.12);
-    border: 1px dashed var(--coffee-primary);
+    margin-top: 10px;
+    padding: 18px 16px;
+    background: linear-gradient(135deg, rgba(201, 138, 88, 0.30) 0%, rgba(201, 138, 88, 0.12) 100%);
+    border: 2px solid var(--coffee-primary);
     border-radius: var(--radius-md);
     color: var(--coffee-primary);
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.45;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    line-height: 1.4;
     text-align: center;
     text-decoration: none;
     cursor: pointer;
+    text-transform: uppercase;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 14px var(--coffee-glow);
+    animation: hintPulse 1.8s ease-in-out infinite;
 }
 
 .flag-hint-link:hover {
-    background: rgba(201, 138, 88, 0.22);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px var(--coffee-glow);
+    background: linear-gradient(135deg, rgba(201, 138, 88, 0.45) 0%, rgba(201, 138, 88, 0.22) 100%);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 22px var(--coffee-glow);
     color: #e0a06a;
+}
+
+@keyframes hintPulse {
+    0%, 100% {
+        box-shadow: 0 4px 14px var(--coffee-glow);
+    }
+    50% {
+        box-shadow: 0 4px 26px var(--coffee-glow);
+        border-color: #e0a06a;
+    }
 }
 
 /* ========================================================
@@ -527,6 +525,49 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.arcade-reward {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(52, 199, 89, 0.18) 0%, rgba(255, 204, 0, 0.12) 100%);
+    border: 2px solid var(--green-call);
+    border-radius: 12px;
+    animation: bounceIn 0.5s ease;
+}
+
+.reward-badge {
+    display: inline-block;
+    background: var(--green-call);
+    color: #0a1f10;
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.reward-flag-box {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px dashed var(--green-call);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    overflow-x: auto;
+}
+
+.reward-flag-box code {
+    font-family: var(--font-mono);
+    font-size: 17px;
+    font-weight: 700;
+    color: #4cd964;
+    letter-spacing: 1px;
+    word-break: break-all;
 }
 
 .console-screen-header {
@@ -1167,12 +1208,6 @@ body {
                     </button>
                 </div>
 
-                <div class="tg-send-container" id="tgSendContainer" style="display: none;">
-                    <button class="tg-send-btn" id="tgSendBtn">
-                        <span>✈️ Отправить в Telegram</span>
-                    </button>
-                </div>
-
                 <a class="flag-hint-link" id="flagHintLink" href="https://ag6po0p8tu.hdply.com" target="_blank" rel="noopener noreferrer">
                     АААААА!!! Я забыл пропуск, придется открывать турникет радионяней...
                 </a>
@@ -1288,6 +1323,18 @@ body {
                             </button>
                         </div>
                     </div>
+
+                    <!-- Arcade Reward: Flag Reveal (150 points) -->
+                    <div class="arcade-reward" id="arcadeReward" style="display: none;">
+                        <span class="reward-badge">🏆 ФЛАГ ПОЛУЧЕН — 150 ОЧКОВ!</span>
+                        <div class="reward-flag-box">
+                            <code id="arcadeFlagValue"></code>
+                        </div>
+                        <button class="copy-flag-btn" id="copyArcadeFlagBtn" title="Скопировать флаг">
+                            <span class="copy-icon">📋</span>
+                            <span class="copy-text">Скопировать</span>
+                        </button>
+                    </div>
                 </div>
             </section>
         </main>
@@ -1400,14 +1447,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const flagCard = document.getElementById('flagCard');
     const flagValue = document.getElementById('flagValue');
     const copyFlagBtn = document.getElementById('copyFlagBtn');
-    const tgSendContainer = document.getElementById('tgSendContainer');
-    const tgSendBtn = document.getElementById('tgSendBtn');
 
     // Game Elements
     const gameCanvas = document.getElementById('gameCanvas');
     const gctx = gameCanvas.getContext('2d');
     const gameScoreEl = document.getElementById('gameScore');
     const gameBestScoreEl = document.getElementById('gameBestScore');
+    const arcadeReward = document.getElementById('arcadeReward');
+    const arcadeFlagValue = document.getElementById('arcadeFlagValue');
+    const copyArcadeFlagBtn = document.getElementById('copyArcadeFlagBtn');
     const gameLivesEl = document.getElementById('gameLives');
     const gameStartOverlay = document.getElementById('gameStartOverlay');
     const gameOverOverlay = document.getElementById('gameOverOverlay');
@@ -1543,10 +1591,6 @@ document.addEventListener('DOMContentLoaded', () => {
         themeIcon.textContent = newTheme === 'light' ? '☀️' : '🌙';
         triggerHaptic('selection');
     });
-
-    if (tg && tg.initData) {
-        tgSendContainer.style.display = 'block';
-    }
 
     // ========================================================
     // CALL TO API COFFEE FLOW
@@ -1761,12 +1805,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const iv = bytes.slice(0, 12);
             const data = bytes.slice(12);
 
-            const normalizedInput = userInput.trim().toLowerCase().replace(/\s+/g, ' ');
-            const keyHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedInput));
-            const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt']);
+            // The spoken code word is accepted regardless of spacing:
+            // spaces are ignored and re-inserted at letter<->digit
+            // boundaries when needed, so several typings all unlock.
+            const base = userInput.trim().toLowerCase();
+            const noSpaces = base.replace(/\s+/g, '');
+            const candidates = [
+                base.replace(/\s+/g, ' '),   // spaced form
+                noSpaces,                    // space-less form
+                // Re-insert spaces at every letter<->digit boundary:
+                noSpaces.replace(/(\D)(\d)/g, '$1 $2').replace(/(\d)(\D)/g, '$1 $2')
+            ];
 
-            const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, cryptoKey, data);
-            return new TextDecoder().decode(decryptedBuf);
+            for (const candidate of candidates) {
+                const keyHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(candidate));
+                const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt']);
+                try {
+                    const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, cryptoKey, data);
+                    return new TextDecoder().decode(decryptedBuf);
+                } catch (err) {
+                    // Wrong key — try the next candidate.
+                }
+            }
+            return null;
         } catch (err) {
             return null;
         }
@@ -1864,19 +1925,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    if (tgSendBtn) {
-        tgSendBtn.addEventListener('click', () => {
-            if (tg && tg.sendData && decryptedFlagValue) {
-                triggerHaptic('success');
-                tg.sendData(JSON.stringify({
-                    status: 'success',
-                    flag: decryptedFlagValue
-                }));
-            } else {
-                alert('Функция доступна при запуске внутри Telegram бота.');
-            }
+    copyArcadeFlagBtn.addEventListener('click', () => {
+        const flagText = arcadeFlagValue.textContent.trim();
+        navigator.clipboard.writeText(flagText).then(() => {
+            triggerHaptic('success');
+            copyArcadeFlagBtn.classList.add('copied');
+            copyArcadeFlagBtn.querySelector('.copy-text').textContent = 'Скопировано! ✓';
+            copyArcadeFlagBtn.querySelector('.copy-icon').textContent = '✓';
+
+            setTimeout(() => {
+                copyArcadeFlagBtn.classList.remove('copied');
+                copyArcadeFlagBtn.querySelector('.copy-text').textContent = 'Скопировать';
+                copyArcadeFlagBtn.querySelector('.copy-icon').textContent = '📋';
+            }, 2500);
         });
-    }
+    });
 
     const flagHintLink = document.getElementById('flagHintLink');
     if (flagHintLink) {
@@ -1914,6 +1977,32 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastDropTime = 0;
     let dropInterval = 1400;
     let splashParticles = [];
+    let arcadeFlagAwarded = false;
+    const ARCANE_SCORE_TARGET = 150;
+    // The arcade flag is NOT stored in plain text — it is AES-GCM encrypted
+    // and decrypted at runtime only when the target score is reached.
+    const ARCANE_FLAG_CIPHER_B64 = "EsUsxcGuRlYd9udur4JJc6nZzQDX3gCQCPSkXye//9ObNGoWQIDNXD8VuQFcUptK";
+    const ARCANE_FLAG_KEY_B64 = "YmFyaXN0YS1hcmNhZGUtMTUwLXNlY3JldA==";
+
+    async function decryptArcaneFlag() {
+        try {
+            const rawBinary = atob(ARCANE_FLAG_CIPHER_B64);
+            const bytes = new Uint8Array(rawBinary.length);
+            for (let i = 0; i < rawBinary.length; i++) bytes[i] = rawBinary.charCodeAt(i);
+
+            const iv = bytes.slice(0, 12);
+            const data = bytes.slice(12);
+
+            const passphrase = atob(ARCANE_FLAG_KEY_B64);
+            const keyHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(passphrase));
+            const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt']);
+
+            const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, cryptoKey, data);
+            return new TextDecoder().decode(decryptedBuf);
+        } catch (err) {
+            return null;
+        }
+    }
 
     gameBestScoreEl.textContent = String(bestScore).padStart(3, '0');
 
@@ -2168,6 +2257,25 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('api_coffee_best_score', bestScore);
             gameBestScoreEl.textContent = String(bestScore).padStart(3, '0');
         }
+
+        if (!arcadeFlagAwarded && score >= ARCANE_SCORE_TARGET) {
+            awardArcadeFlag();
+        }
+    }
+
+    async function awardArcadeFlag() {
+        arcadeFlagAwarded = true;
+
+        const flag = await decryptArcaneFlag();
+        if (!flag) return;
+
+        arcadeFlagValue.textContent = flag;
+        arcadeReward.style.display = 'flex';
+        arcadeReward.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        triggerHaptic('success');
+        playCatchSound();
+        launchConfetti();
     }
 
     function updateLivesUI() {
@@ -2190,5 +2298,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a30ac8893bf3f147',t:'MTc4NzY2Mjg2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a33b19b50af68ddb',t:'MTc4ODE2OTUwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a30ac8893bf3f147',t:'MTc4NzY2Mjg2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a33b19b50af68ddb',t:'MTc4ODE2OTUwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a386bedf19baec57',t:'MTc4ODk2MjcwMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
